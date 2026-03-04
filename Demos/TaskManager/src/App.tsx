@@ -1,6 +1,9 @@
 import { useState } from 'react' //useState is a React hook for managing state
-import TaskCard from './components/TaskCard/TaskCard'
 import type { Task } from './types/Task'; //import type because Task is a type
+import NavBar from './components/NavBar/NavBar';
+import Dashboard from './pages/Dashboard/Dashboard';
+import TaskList from './pages/TaskList/TaskList';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import './App.css'
 
 // State for our TaskCard will live here - for now - we might refactor away
@@ -65,30 +68,27 @@ function App() {
   }
 
   return (
-    <main className='app-container'>
-      <h1>Task Manger</h1>
-      <p>A Task Manager front end built with React + TS</p>
-      
-      {/* Remember, we want to render/generate a TaskCard component
-        for every task in our list (that's in State) */}
-      {/* Whenever we're using this pattern, for list of x objects
-      generate a corresponding number of components, we need to use a Key.
-      A key is a like any other prop, except we don't pass it to the child. 
-      React uses it behind the scenes, to track which child component is being 
-      updated*/}
-      <section>
-        {tasks.map((task) => (
-          <TaskCard
-            key={task.id}
-            task={task}
-            onStatusChange={handleStatusChange}
-          />
-        ))
-        }
-      </section>
+    //BrowserRouter wraps out application and enables routing
+    <BrowserRouter>
+      {/* The navbar sits outside the <Routes>, it is always rendered and not part of a 
+        specific page. Omnipresent */}
+      <NavBar />
 
+      <main className='app-container'>
+        <Routes>
+          {/* The root route, should probably always be defined ('/')
+            It is what users will see when they first land on the page */}
+            <Route path='/' element={<Dashboard tasks={tasks} />} />
 
-    </main>
+            <Route 
+              path='/tasks' 
+              element={ <TaskList tasks={tasks} onStatusChange={handleStatusChange} />}
+            />
+            
+        </Routes>
+      </main>
+    
+    </BrowserRouter>
   )
 }
 
