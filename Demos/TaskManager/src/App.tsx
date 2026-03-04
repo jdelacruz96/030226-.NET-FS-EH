@@ -11,34 +11,6 @@ import './App.css'
 // If we were using an API to get task info - we'd send the HTTP requests from this component
 // and pass the data to TaskCard as props. For now we'll hardcode things. 
 
-//First, kind of boring, lets hardcode some task objects - as an array
-const initialTasks: Task[] = [
-  {
-    id: 1,
-    title: "Set up GH repo",
-    description: "Initialize git repo, add .gitignore for react projects",
-    assignee: "Asmita",
-    status: "todo",
-    priority: "high"
-  },
-  {
-    id: 2,
-    title: "Design DB Schema",
-    description: "Draft ERD for user, task tables",
-    assignee: "Pavel",
-    status: "in-progress",
-    priority: "medium"
-  },
-  {
-    id: 3,
-    title: "Create homepage Figma mockup",
-    description: "Sketch simple wireframe for the landing view/page",
-    assignee: "Sammar",
-    status: "todo",
-    priority: "low"
-  }
-]
-
 
 function App() {
   //In order to store anything as State, we need to use useState (for now)
@@ -69,11 +41,11 @@ function App() {
 
   return (
     //BrowserRouter wraps out application and enables routing
+    
     <BrowserRouter>
       {/* The navbar sits outside the <Routes>, it is always rendered and not part of a 
         specific page. Omnipresent */}
       <NavBar />
-
       <main className='app-container'>
         <Routes>
           {/* The root route, should probably always be defined ('/')
