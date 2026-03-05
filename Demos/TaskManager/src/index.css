@@ -668,3 +668,74 @@ body[data-theme="dark"] .theme-toggle {
 body[data-theme="dark"] .theme-toggle:hover {
     background-color: #4a5568;
 }
+
+/* --------------------------------------------------------------------------
+   15. Activity Feed (Day 4 useEffect Demo)
+   -------------------------------------------------------------------------- */
+
+.activity-feed {
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: var(--space-lg);
+    box-shadow: var(--shadow-sm);
+    margin-top: var(--space-lg);
+}
+
+.activity-feed h3 {
+    margin-bottom: var(--space-md);
+    font-size: 1.1rem;
+    color: var(--color-text);
+}
+
+.activity-feed ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.activity-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    padding: var(--space-sm) 0;
+    border-bottom: 1px solid var(--color-border);
+    font-size: 0.9rem;
+    color: var(--color-text-muted);
+}
+
+.activity-item:last-child {
+    border-bottom: none;
+}
+
+.activity-item .completed {
+    color: var(--color-success);
+    font-weight: 600;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+}
+
+.activity-item .pending {
+    color: var(--color-primary);
+    font-weight: 600;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+}
+
+.loading-message,
+.error-message {
+    padding: var(--space-md);
+    background-color: var(--color-surface);
+    border: 1px dashed var(--color-border);
+    border-radius: var(--radius-md);
+    text-align: center;
+    font-size: 0.9rem;
+    margin-top: var(--space-lg);
+}
+
+.error-message {
+    color: var(--color-danger);
+    border-color: #fed7d7;
+    background-color: #fff5f5;
+}
+ 

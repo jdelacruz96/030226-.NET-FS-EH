@@ -6,6 +6,7 @@
 //import type { Task } from '../../types/Task'
 import { useTaskContext } from '../../contexts/TaskContext'
 import { useDocumentTitle } from '../../hooks/useDocumentTitle';
+import TaskActivityFeed from '../../components/TaskActivityFeed/TaskActivityFeed';
 
 //Just like yesterday, because this is TS, we need to define an interface
 //for our props
@@ -30,6 +31,7 @@ function Dashboard() {
         <h2>Dashboard</h2>
         {/* All we want to do is tell the user, there are x tasks right now */}
         <p>There are {tasks.length} tasks on the board</p>
+        <TaskActivityFeed></TaskActivityFeed>
     </section>
   )
 }

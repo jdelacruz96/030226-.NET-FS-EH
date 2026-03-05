@@ -34,7 +34,7 @@ function TaskActivityFeed() {
             
             try{
                 //First, send our Fetch GET request, limit results to 5
-                const response = await fetch("https://jsonplaceholder.typicode.com/todos?_limit=5")
+                const response = await fetch("https://jsonplaceholder.typicode.com/todos?_limit=50")
                 
                 // Then we check for HTTP errors
                 if (!response.ok) {
@@ -70,9 +70,29 @@ function TaskActivityFeed() {
         };
 
     }, []) //dont forget that empty dependency array second arg
+
+    if (loading) {
+        return <p className="loading-message">Loading activity feed...</p>
+    }
+
+    if (error) {
+        return <p className="error-message">Error: {error}</p>
+    }
   
     return (
-    <div>TaskActivityFeed</div>
+        <section className="activity-feed">
+            <h3>Recent Activity</h3>
+            <ul>
+                {activities.map((item) => (
+                    <li key={item.id} className="activity-item">
+                        <span className={item.completed? "completed": "pending"}>
+                            {item.completed? "[DONE]" : "[OPEN]"}
+                        </span>{" "} {/* Adding an empty space manually for formatting*/}
+                        {item.title}
+                    </li>
+                ))}
+            </ul>
+        </section>
   )
 }
 
