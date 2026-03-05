@@ -6,6 +6,7 @@ import TaskList from './pages/TaskList/TaskList';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { TaskProvider } from './contexts/TaskContext';
 import './App.css'
+import AddTaskForm from './components/AddTaskForm/AddTaskForm';
 
 // State for our TaskCard will live here - for now - we might refactor away
 // from this when we get to things like Context and useReducer later this week
@@ -56,6 +57,7 @@ function App() {
                 path='/tasks' 
                 element={ <TaskList />}
               />
+              <Route path='/tasks/new' element={<AddTaskForm />} />
           </Routes>
         </main>
       </BrowserRouter>

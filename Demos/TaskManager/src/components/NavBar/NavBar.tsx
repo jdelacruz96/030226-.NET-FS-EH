@@ -16,6 +16,7 @@ function NavBar() {
                 the actual browser URL path that the link leads to */}
             <Link to="/" className='nav-link'> Dashboard </Link>
             <Link to="/tasks" className='nav-link'>Task List</Link>  
+            <Link to="/tasks/new" className='nav-link'>New Task</Link>
         </div>
     </nav>
 

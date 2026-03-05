@@ -2,7 +2,7 @@
 // It will also use axios to "POST" our task to the jsonplaceholder API
 // In order to do this, we will use a React Form - which is just an HTML form 
 // inside of React (with some specific react weirdness we have to account for)
-import { useState, FormEvent, ChangeEvent } from "react"
+import { useState, type FormEvent, type ChangeEvent } from "react"
 import type { Task } from "../../types/Task"
 import { useTaskContext } from "../../contexts/TaskContext"
 import axios from "axios"
@@ -146,8 +146,92 @@ function AddTaskForm() {
 
     }
 
+    // Finally, lets build what our TaskForm component will actually render for the user
   return (
-    <div>AddTaskForm</div>
+    <form className="add-task-form" onSubmit={handleSubmit} noValidate>
+        <h2>Add New Task</h2>
+
+        {/* If submiterror has a value, then render the html after the && */}
+        {submitError && (
+            <div className="alert alert-error">{submitError}</div>
+        )}
+
+        <div className="form-group">
+            <label htmlFor="title">Title</label>
+            <input 
+                type="text" 
+                name="title" 
+                id="title" 
+                value={formData.title}
+                onChange={handleChange}
+                className={formErrors.title ? "input-error" : ""}
+                disabled={isSubmitting}
+            />
+
+            {/* Conditionally render any field specific validation errors below the input */}
+            {formErrors.title && <span className="field-error">{formErrors.title}</span>}
+        </div>
+
+        <div className="form-group">
+            <label htmlFor="description">Description</label>
+            <textarea 
+                name="description" 
+                id="description" 
+                value={formData.description}
+                onChange={handleChange}
+                className={formErrors.description ? "input-error" : ""}
+                disabled={isSubmitting}
+                rows={3}
+            />
+
+            {/* Conditionally render any field specific validation errors below the input */}
+            {formErrors.description && <span className="field-error">{formErrors.description}</span>}
+        </div>
+
+        <div className="form-group">
+            <label htmlFor="assignee">Assignee</label>
+            <input 
+                type="text" 
+                name="assignee" 
+                id="assignee" 
+                value={formData.assignee}
+                onChange={handleChange}
+                className={formErrors.assignee ? "input-error" : ""}
+                disabled={isSubmitting}
+            />
+
+            {/* Conditionally render any field specific validation errors below the input */}
+            {formErrors.assignee && <span className="field-error">{formErrors.assignee}</span>}
+        </div>
+
+        <div className="form-group">
+            <label htmlFor="priority">Priority</label>
+
+            <select 
+                name="priority" 
+                id="priority"
+                value={formData.priority}
+                onChange={handleChange}
+                disabled={isSubmitting}
+            >
+                {/* For a select HTML input element, we need to set the options that are possible */}
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+            </select>
+        </div>
+
+        {/* Every form needs a submit button - and we can disable the button 
+            to prevent accidental rapid fire duplicate submissions */}
+        <button
+            type="submit"
+            className="submit-btn"
+            disabled={isSubmitting}
+        >
+            {isSubmitting? "Submitting..." : "Create Task"}
+        </button>
+
+    </form>
   )
 }
 
