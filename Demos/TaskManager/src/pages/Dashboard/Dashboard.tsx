@@ -5,6 +5,7 @@
 
 import React from 'react'
 import type { Task } from '../../types/Task'
+import { useTaskContext } from '../../contexts/TaskContext'
 
 //Just like yesterday, because this is TS, we need to define an interface
 //for our props
@@ -13,8 +14,13 @@ interface DashboardProps {
     tasks: Task[]
 }
 
-//Just like yesterday, we need to set up our component to take in props
-function Dashboard({ tasks }: DashboardProps) {
+function Dashboard() {
+
+  //Instead of taking in the task list as props provided as arguments to functional component
+  //we will instead "consume" or "ask for" the context value that is stored in TaskContext.tsx
+  //To do that, we just use that custom hook we set up earlier.
+  const { tasks } = useTaskContext();
+
   return (
     <section className='dashboard'>
         <h2>Dashboard</h2>

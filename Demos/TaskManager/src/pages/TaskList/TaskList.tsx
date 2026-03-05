@@ -16,6 +16,7 @@
 import React from 'react'
 import type { Task } from '../../types/Task'
 import TaskCard from '../../components/TaskCard/TaskCard'
+import { useTaskContext } from '../../contexts/TaskContext'
 
 interface TaskListProps{
     tasks: Task[] // Task objects to render, coming from App.tsx's state
@@ -27,36 +28,55 @@ interface TaskListProps{
     onStatusChange: (id: number, newStatus:Task["status"]) => void;
 }
 
-function TaskList( {tasks, onStatusChange}: TaskListProps) {
-  return (
-    <section className='task-list-page'>
+function TaskList() {
+
+    //Call the custom hook - this time we ask for task and the dispatch function
+    //Since TaskList will update the value inside of the TaskContext
+    const { tasks, dispatch } = useTaskContext();
+
+    //We still need to pass a callback function to our TaskCard components 
+    //that we render below. This function will work differently from the function
+    //we used to update State (via useState and its setter) yesterday
+
+    function handleStatusChange(
+        id: number, 
+        newStatus: "todo" | "in-progress" | "done"
+    ) : void {
+        //Here, this function calls the reducer dispatch - and calls 
+        //a "CHANGE_STATUS" action
+        dispatch({ type: "CHANGE_STATUS", payload: {id, status: newStatus} })
+    }
+
+
+    return (
+        <section className='task-list-page'>
+            
+            <h2>All Tasks</h2>
+
+        {/* Rendering my TaskCards here, rather than in App.tsx
+            Notice I passed the prop straight through. */}
+
+        {/* Remember, we want to render/generate a TaskCard component
+        for every task in our list (that's in State) */}
         
-        <h2>All Tasks</h2>
+        {/* Whenever we're using this pattern, for list of x objects
+        generate a corresponding number of components, we need to use a Key.
+        A key is a like any other prop, except we don't pass it to the child. 
+        React uses it behind the scenes, to track which child component is being 
+        updated*/}
+            <div className='task-list'>
+                {tasks.map((task) => (
+                    <TaskCard
+                        key={task.id}
+                        task={task}
+                        onStatusChange={handleStatusChange}
+                    />
+                ))
+                }
+            </div>
 
-    {/* Rendering my TaskCards here, rather than in App.tsx
-        Notice I passed the prop straight through. */}
-
-    {/* Remember, we want to render/generate a TaskCard component
-    for every task in our list (that's in State) */}
-    
-      {/* Whenever we're using this pattern, for list of x objects
-      generate a corresponding number of components, we need to use a Key.
-      A key is a like any other prop, except we don't pass it to the child. 
-      React uses it behind the scenes, to track which child component is being 
-      updated*/}
-        <div className='task-list'>
-            {tasks.map((task) => (
-                <TaskCard
-                    key={task.id}
-                    task={task}
-                    onStatusChange={onStatusChange}
-                />
-            ))
-            }
-        </div>
-
-    </section>
-  )
+        </section>
+    )
 }
 
 export default TaskList
