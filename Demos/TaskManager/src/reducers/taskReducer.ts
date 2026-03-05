@@ -26,6 +26,11 @@ export function taskReducer(state: Task[], action: TaskAction): Task[] {
             )
         
         // TODO: Adding a task, and deleteing a task
+        case "ADD_TASK":
+            //When we add a task to our context, we use the "..." spread operator to 
+            //create a new array that contains all existing tasks with the new one
+            // tacked on at the end.
+            return [...state, action.payload]
 
         default: { 
             //If we forget (somehow) to handle a possible action type

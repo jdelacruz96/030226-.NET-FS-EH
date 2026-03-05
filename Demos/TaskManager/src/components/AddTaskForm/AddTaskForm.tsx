@@ -90,6 +90,61 @@ function AddTaskForm() {
         return newErrors;
     }
 
+    // Handling the form submit event
+    async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
+        // Part of what changed that led to the deprecation of FormEvent in the newest
+        // release of React was not having to explicitly play with default form element behaviors
+        // Since we're doing this the "old fashioned way" we still need to prevent default
+        event.preventDefault(); // stops the form from triggering a page reload
+        setSubmitError(null);
+
+        const validationErrors = validate();
+
+        if(Object.keys(validationErrors).length > 0) {
+            setFormErrors(validationErrors);
+            return;
+        }
+
+        // Using our submission flag
+        setIsSubmitting(true);
+
+        // We can use axios to send that HTTP POST request to the placeholder api
+        try {
+
+            //POST to the jsonplaceholder mock API
+            const response = await axios.post(
+                "https://jsonplaceholder.typicode.com/todos",
+                {
+                    title: formData.title,
+                    body: formData.description,
+                    userId: 1
+                }
+            )
+
+            // We probably want to actually add the task to our list of Tasks in context
+            const newTask: Task = {
+                // We need to find the largest ID in our current list - and create an ID
+                // that's one larger than that
+                id: Math.max(0, ...tasks.map((t) => t.id)) + 1,
+                title: response.data.title,
+                description: formData.description,
+                assignee: formData.assignee,
+                status: "todo",
+                priority: formData.priority
+            }
+
+            //Here, I would call dispatch for the reducer to update task context
+            dispatch({type: "ADD_TASK", payload: newTask})
+            // Reset form
+            setFormData(initialFormState);
+
+        } catch (error: unknown) {
+            setSubmitError("Submission failed, please try again.")
+        } finally {
+            setIsSubmitting(false)
+        }
+
+    }
 
   return (
     <div>AddTaskForm</div>
