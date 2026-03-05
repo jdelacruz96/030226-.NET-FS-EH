@@ -3,16 +3,16 @@
 //there are in total, another page will actually render the TaskCards
 //and let them do the updating of the status
 
-import React from 'react'
-import type { Task } from '../../types/Task'
+//import type { Task } from '../../types/Task'
 import { useTaskContext } from '../../contexts/TaskContext'
+import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 
 //Just like yesterday, because this is TS, we need to define an interface
 //for our props
-interface DashboardProps {
-    //This component takes in the array of task objects held in App.tsx's state
-    tasks: Task[]
-}
+// interface DashboardProps {
+//     //This component takes in the array of task objects held in App.tsx's state
+//     tasks: Task[]
+// }
 
 function Dashboard() {
 
@@ -20,6 +20,10 @@ function Dashboard() {
   //we will instead "consume" or "ask for" the context value that is stored in TaskContext.tsx
   //To do that, we just use that custom hook we set up earlier.
   const { tasks } = useTaskContext();
+
+  //Sync the document title with the current task count
+  //Every time a new task is added the title with change
+  useDocumentTitle(`Task Manager - ${tasks.length} tasks`)
 
   return (
     <section className='dashboard'>
