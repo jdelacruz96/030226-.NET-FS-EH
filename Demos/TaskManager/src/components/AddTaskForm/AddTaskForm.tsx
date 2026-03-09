@@ -113,25 +113,17 @@ function AddTaskForm() {
 
             //POST to the jsonplaceholder mock API
             const response = await axios.post(
-                "https://jsonplaceholder.typicode.com/todos",
+                "http://localhost:5130/api/tasks",
                 {
                     title: formData.title,
-                    body: formData.description,
-                    userId: 1
+                    description: formData.description,
+                    asssignee: formData.assignee,
+                    priority: formData.priority
                 }
             )
 
             // We probably want to actually add the task to our list of Tasks in context
-            const newTask: Task = {
-                // We need to find the largest ID in our current list - and create an ID
-                // that's one larger than that
-                id: Math.max(0, ...tasks.map((t) => t.id)) + 1,
-                title: response.data.title,
-                description: formData.description,
-                assignee: formData.assignee,
-                status: "todo",
-                priority: formData.priority
-            }
+            const newTask: Task = response.data;
 
             //Here, I would call dispatch for the reducer to update task context
             dispatch({type: "ADD_TASK", payload: newTask})

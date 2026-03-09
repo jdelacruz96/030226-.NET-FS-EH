@@ -34,7 +34,7 @@ function TaskActivityFeed() {
             
             try{
                 //First, send our Fetch GET request, limit results to 5
-                const response = await fetch("https://jsonplaceholder.typicode.com/todos?_limit=50")
+                const response = await fetch("http://localhost:5130/api/tasks")
                 
                 // Then we check for HTTP errors
                 if (!response.ok) {
