@@ -1,0 +1,118 @@
+# This is a YAML comment, these get ignored like any other language's comments.
+
+# First part of our file, defines our triggers - What causes this pipeline to actually start running. 
+trigger:
+  branches:
+    include:
+      - main
+
+# Depending on what we're doing, we may not need the next section... but its not a bad idea to be specific about it.
+# Pool section: what kind of preconfigured agent do we want to take our job?
+# These agents come with things like Node.js, npm, git, even docker preinstalled.
+pool: 
+  vmImage: "ubuntu-latest"
+
+# Our CI/CD pipeline "Job" is broken out into stages. Each job inside a stage is further subdivided into discrete
+# tasks.
+
+stages:
+  - stage: Build
+    displayName: "Build my Front End"
+    
+    jobs:
+      - job: FrontEnd
+
+        displayName: "Install, Lint, (Potentially test), Build"
+        steps:
+
+          # Every job is broken out into steps, the steps are the discrete sequence of commands we need to run
+          # to complete the overall job - if one of these fails, the job fails - if one job fails the pipeline fails
+          # Step 1 - select the Node.js version
+          - task: UseNode@1
+            displayName: "Use Node.js 18.x"
+            inputs:
+              version: "18.x"
+
+          # Step 2, install dependencies
+          # We are going to use npm ci instead of npm install - npm ci skips package resolution. It installs
+          # everything in the package-lock.json, deleting node_modules first. SO its a clean install every time.
+          - script: npm ci
+            displayName: "Install dependencies via npm ci"
+            workingDirectory: "$(Build.SourcesDirectory)/TaskManager"
+
+          # Step 3, we run the linter
+          # We probably want to run the linter to catch any potential bugs or 
+          # code style violations. 
+          - script: npm run lint
+            displayName: "Lint our source code"
+            workingDirectory: "$(Build.SourcesDirectory)/TaskManager"
+
+          # Step 3.5 kinda... if we had unit tests for our front end, we'd include a step here to 
+          # run them and only proceed if every test passed.
+          # - script: npm test -- --ci --reporters=default
+          #   displayName: "Run unit tests"
+          #   workingDirectory: "$(Build.SourcesDirectory)/TaskManager"
+
+          # Step 4: Build the production front end bundle
+          # We are going to use Vite, it will compile our TS, create our bundles,
+          # outputs static files to a specific directory called dist/
+          - script: npm run build
+            displayName: "Building my production bundle"
+            workingDirectory: "$(Build.SourcesDirectory)/TaskManager" #/dist
+
+          # Step 5: Publish!
+          # After the preceding step, we have a deployment ready bundle inside a directory
+          # called dist/ - The contents of which are available to be downlaoded/consumed 
+          # by subsequent job. Things like docker building a container image of our app,
+          # or deploying the raw bundle right to an Azure Webapp
+          - task: PublishBuildArtifacts@1
+            displayName: "Publish dist/ artifact"
+            inputs:
+              PathtoPublish: "$(Build.SourcesDirectory)/TaskManager/dist"
+              ArtifactName: "taskmanager-dist"
+              publishLocation: "Container"
+
+      - job: BackEnd
+        displayName: "Backend -- Restore, Built, Test (if we had tests), Publish"
+        steps:
+          
+          
+          # Step 1, select your .NET SDK version
+          - task: UseDotNet@2
+            displayName: "Use .NET 9.x SDK"
+            inputs:
+              packageType: "sdk"
+              version: "9.x"
+          
+          # Step 2, restore NuGet packages
+          - script: dotnet restore
+            displayName: "Restore NuGet Packages"
+            workingDirectory: "$(Build.SourcesDirectory)/TaskManagerAPI"
+          
+          # Step 3: Build the project
+          # --no-restore: skips the restore since we already did it
+          # --configuration Release uses pre-optimized compilation settings
+          - script: dotnet build --no-restore --configuration Release
+            displayName: "Build (Release)"
+            workingDirectory: "$(Build.SourcesDirectory)/TaskManagerAPI"
+          
+          # Step 3.5: Test the project
+          # If we had xunit tests, we'd call dotnet test here and only proceed
+          # if tests passed
+
+          # Step 4: Publish the app
+          # dotnet publish produces a self contained deployment folder
+          # That folder has all your DLLs and dependencies. This is like 
+          # the frontend's /dist directory. 
+          - script: dotnet publish --no-build --configuration Release --output $(Build.ArtifactStagingDirectory)/TaskManagerAPI
+            displayName: "Publish backend app"
+            workingDirectory: "$(Build.SourcesDirectory)/TaskManagerAPI"
+          
+          # Step 5: Upload the published output as a Pipeline Artifact
+          # Tomorrow, docker will grab this and do stuff with it
+          - task: PublishBuildArtifacts@1
+            displayName: "Publish Backend Artifact"
+            inputs: 
+              PathtoPublish: $(Build.ArtifactStagingDirectory)/TaskManagerAPI
+              ArtifactName: "taskmanager-backend"
+              publishLocation: "Container"

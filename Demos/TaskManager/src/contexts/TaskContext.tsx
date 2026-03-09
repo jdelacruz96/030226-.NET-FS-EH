@@ -1,3 +1,5 @@
+/* eslint-disable react-refresh/only-export-components */ 
+
 // This file will hold our context, and export the TaskContext and TaskProvider
 // Here we will use the useContext Hook, rather than useState. We will also make
 // use of that reducer from this file. 
