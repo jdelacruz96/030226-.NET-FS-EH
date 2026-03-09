@@ -2,7 +2,7 @@
 // that is rendered at the top of every page at all times
 // Instead of normal HTML <a> links, we will use React Router <link> tags
 // If we use <a> links, that triggers an actual browser page refresh - NOT WHAT WE WANT
-import React from 'react'
+//import React from 'react'
 import { Link } from 'react-router-dom'
 
 function NavBar() {

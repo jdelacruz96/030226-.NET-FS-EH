@@ -42,7 +42,7 @@ const initialFormState: FormState = {
 function AddTaskForm() {
     
     // First, lets bring in our Context (task list stored in TaskContext)
-    const { tasks, dispatch } = useTaskContext();
+    const { dispatch } = useTaskContext();
 
     // Next, we set up our Form States via useState()
     const [ formData, setFormData] = useState<FormState>(initialFormState);

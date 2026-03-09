@@ -1,5 +1,5 @@
-import { useState } from 'react' //useState is a React hook for managing state
-import type { Task } from './types/Task'; //import type because Task is a type
+//import { useState } from 'react' //useState is a React hook for managing state
+//import type { Task } from './types/Task'; //import type because Task is a type
 import NavBar from './components/NavBar/NavBar';
 import Dashboard from './pages/Dashboard/Dashboard';
 import TaskList from './pages/TaskList/TaskList';

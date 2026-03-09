@@ -1,7 +1,7 @@
 // This component will display a single task, and it's
 // information/metadata for use in some other view
 
-import React from 'react' //every component we write will import React from 'react'
+// import React from 'react' //every component we write will import React from 'react'
 import type { Task } from '../../types/Task'; //using a named import, since task did not use export default
  //using a named import, since task did not use export default
 

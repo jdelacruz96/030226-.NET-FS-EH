@@ -13,20 +13,20 @@
 //  It will need to take in the overall list of tasks from state as a prop
 //      to then pass individual tasks to TaskCard children as they're rendered
 
-import React from 'react'
-import type { Task } from '../../types/Task'
+// import React from 'react'
+// import type { Task } from '../../types/Task'
 import TaskCard from '../../components/TaskCard/TaskCard'
 import { useTaskContext } from '../../contexts/TaskContext'
 
-interface TaskListProps{
-    tasks: Task[] // Task objects to render, coming from App.tsx's state
-    //We also have to take in that callback functions, even though all we do 
-    //is pass it to the TaskCard child components. This is NOT IDEAL.
-    //This is a problem, that while not breaking, is bad enough that React came up 
-    //with a solution.
-    //This is Prop Drilling (bad)
-    onStatusChange: (id: number, newStatus:Task["status"]) => void;
-}
+// interface TaskListProps{
+//     tasks: Task[] // Task objects to render, coming from App.tsx's state
+//     //We also have to take in that callback functions, even though all we do 
+//     //is pass it to the TaskCard child components. This is NOT IDEAL.
+//     //This is a problem, that while not breaking, is bad enough that React came up 
+//     //with a solution.
+//     //This is Prop Drilling (bad)
+//     onStatusChange: (id: number, newStatus:Task["status"]) => void;
+// }
 
 function TaskList() {
 
