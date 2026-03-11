@@ -1,0 +1,234 @@
+# This is a YAML comment, these get ignored like any other language's comments.
+
+# First part of our file, defines our triggers - What causes this pipeline to actually start running. 
+trigger:
+  branches:
+    include:
+      - main
+
+# Depending on what we're doing, we may not need the next section... but its not a bad idea to be specific about it.
+# Pool section: what kind of preconfigured agent do we want to take our job?
+# These agents come with things like Node.js, npm, git, even docker preinstalled.
+pool: 
+  vmImage: "ubuntu-latest"
+
+# Our CI/CD pipeline "Job" is broken out into stages. Each job inside a stage is further subdivided into discrete
+# tasks.
+
+
+variables: 
+  acrName: "taskmanageracr2" # name of my Azure Container registry
+  acrLoginServer: "taskmanageracr2.azurecr.io" # login server url from my container registry
+  frontendImage: "taskmanager-frontend" # name our front end docker image will be given by our CI/CD pipeline
+  backendImage: "taskmanager-api" # name our back end docker image will be given by our CI/CD pipeline
+  imageTag: "$(Build.BuildId)" # uses the specific pipeline run to tag our image
+  azureSubscription: "Training" # name of our Azure subscription where you created all this stuff
+  acrConnection: "ACRConnection" # name of your Azure DevOps Docker Registry Service Connection
+  armConnection: "AzureServiceConnection" # name of your Azure DevOps Resource Manager Service Connection
+  frontendAppService: "taskmanager-demo" # Name of the Azure Web App for the front end
+  backendAppService: "taskmanager-api" # Name of the Azure Web App for the back end
+  backendURL: "https://taskmanager-api-cfaeameyhwe8cqge.eastus-01.azurewebsites.net"
+  resourceGroup: "taskmanager-rg" # Name of the resource group everything lives in
+
+stages:
+  - stage: Build
+    displayName: "Build my Front End"
+    
+    jobs:
+      - job: FrontEnd
+
+        displayName: "Install, Lint, (Potentially test), Build"
+        steps:
+
+          # Every job is broken out into steps, the steps are the discrete sequence of commands we need to run
+          # to complete the overall job - if one of these fails, the job fails - if one job fails the pipeline fails
+          # Step 1 - select the Node.js version
+          - task: UseNode@1
+            displayName: "Use Node.js 18.x"
+            inputs:
+              version: "18.x"
+
+          # Step 2, install dependencies
+          # We are going to use npm ci instead of npm install - npm ci skips package resolution. It installs
+          # everything in the package-lock.json, deleting node_modules first. SO its a clean install every time.
+          - script: npm ci
+            displayName: "Install dependencies via npm ci"
+            workingDirectory: "$(Build.SourcesDirectory)/TaskManager"
+
+          # Step 3, we run the linter
+          # We probably want to run the linter to catch any potential bugs or 
+          # code style violations. 
+          - script: npm run lint
+            displayName: "Lint our source code"
+            workingDirectory: "$(Build.SourcesDirectory)/TaskManager"
+
+          # Step 3.5 kinda... if we had unit tests for our front end, we'd include a step here to 
+          # run them and only proceed if every test passed.
+          # - script: npm test -- --ci --reporters=default
+          #   displayName: "Run unit tests"
+          #   workingDirectory: "$(Build.SourcesDirectory)/TaskManager"
+
+          # Step 4: Build the production front end bundle
+          # We are going to use Vite, it will compile our TS, create our bundles,
+          # outputs static files to a specific directory called dist/
+          - script: npm run build
+            displayName: "Building my production bundle"
+            workingDirectory: "$(Build.SourcesDirectory)/TaskManager" #/dist
+
+          # Step 5: Publish!
+          # After the preceding step, we have a deployment ready bundle inside a directory
+          # called dist/ - The contents of which are available to be downlaoded/consumed 
+          # by subsequent job. Things like docker building a container image of our app,
+          # or deploying the raw bundle right to an Azure Webapp
+          - task: PublishBuildArtifacts@1
+            displayName: "Publish dist/ artifact"
+            inputs:
+              PathtoPublish: "$(Build.SourcesDirectory)/TaskManager/dist"
+              ArtifactName: "taskmanager-dist"
+              publishLocation: "Container"
+
+      - job: BackEnd
+        displayName: "Backend -- Restore, Built, Test (if we had tests), Publish"
+        steps:
+          
+          
+          # Step 1, select your .NET SDK version
+          - task: UseDotNet@2
+            displayName: "Use .NET 9.x SDK"
+            inputs:
+              packageType: "sdk"
+              version: "9.x"
+          
+          # Step 2, restore NuGet packages
+          - script: dotnet restore
+            displayName: "Restore NuGet Packages"
+            workingDirectory: "$(Build.SourcesDirectory)/TaskManagerAPI"
+          
+          # Step 3: Build the project
+          # --no-restore: skips the restore since we already did it
+          # --configuration Release uses pre-optimized compilation settings
+          - script: dotnet build --no-restore --configuration Release
+            displayName: "Build (Release)"
+            workingDirectory: "$(Build.SourcesDirectory)/TaskManagerAPI"
+          
+          # Step 3.5: Test the project
+          # If we had xunit tests, we'd call dotnet test here and only proceed
+          # if tests passed
+
+          # Step 4: Publish the app
+          # dotnet publish produces a self contained deployment folder
+          # That folder has all your DLLs and dependencies. This is like 
+          # the frontend's /dist directory. 
+          - script: dotnet publish --no-build --configuration Release --output $(Build.ArtifactStagingDirectory)/TaskManagerAPI
+            displayName: "Publish backend app"
+            workingDirectory: "$(Build.SourcesDirectory)/TaskManagerAPI"
+          
+          # Step 5: Upload the published output as a Pipeline Artifact
+          # Tomorrow, docker will grab this and do stuff with it
+          - task: PublishBuildArtifacts@1
+            displayName: "Publish Backend Artifact"
+            inputs: 
+              PathtoPublish: $(Build.ArtifactStagingDirectory)/TaskManagerAPI
+              ArtifactName: "taskmanager-backend"
+              publishLocation: "Container"
+
+  
+# Stage 2: Docker build and push (both images to ACR)
+  - stage: DockerBuildAndPush
+    displayName: "Docker Build and Push to ACR"
+    dependsOn: Build # This stage depends on the preceding stage completing successfully
+    pool: 
+      vmImage: "ubuntu-latest"
+    jobs: # We'll have one job for the front end image, and one for the back end image
+      - job: DockerFrontEnd
+        displayName: "Build And Push Frontend Image to ACR"
+        steps:
+          
+          # Step 1: Log into ACR
+          - task: Docker@2
+            displayName: "Login to ACR"
+            inputs:
+              containerRegistry: "$(acrConnection)"
+              command: "login"
+
+          # Step 2: Build the image
+          - task: Docker@2
+            displayName: "Build frontend image"
+            inputs:
+              containerRegistry: "$(acrConnection)"
+              repository: "$(frontendImage)"
+              command: "build"
+              # Relative file path from .yml to front end docker image
+              Dockerfile: "/TaskManager/Dockerfile" 
+              buildContext: "TaskManager"
+              arguments: "--build-arg VITE_API_URL=$(backendURL)"
+              tags: $(imageTag) latest
+
+          # Step 3: Push the image to ACR
+          - task: Docker@2
+            displayName: "Push frontend image to ACR"
+            inputs: 
+              containerRegistry: "$(acrConnection)"
+              repository: "$(frontendImage)"
+              command: "push"
+              tags: $(imageTag) latest
+
+      - job: DockerBackEnd
+        displayName: "Build And Push BackEnd Image to ACR"
+        steps:
+          
+          # Step 1: Log into ACR
+          - task: Docker@2
+            displayName: "Login to ACR"
+            inputs:
+              containerRegistry: "$(acrConnection)"
+              command: "login"
+
+          # Step 2: Build the image
+          - task: Docker@2
+            displayName: "Build backend image"
+            inputs:
+              containerRegistry: "$(acrConnection)"
+              repository: "$(backendImage)"
+              command: "build"
+              # Relative file path from .yml to front end docker image
+              Dockerfile: "/TaskManagerAPI/Dockerfile" 
+              buildContext: "TaskManager"
+              tags: $(imageTag) latest
+
+          # Step 3: Push the image to ACR
+          - task: Docker@2
+            displayName: "Push backend image to ACR"
+            inputs: 
+              containerRegistry: "$(acrConnection)"
+              repository: "$(backendImage)"
+              command: "push"
+              tags: $(imageTag) latest
+
+  # Stage 3: Deploy both containers to their respective Azure App services
+  - stage: DeployToAppServices
+    displayName: "Deploy full stack to our app services"
+    dependsOn: DockerBuildAndPush
+    pool: 
+      vmImage: "ubuntu-latest"
+    jobs:
+      # Frontend deploy job
+      - job: DeployFrontend
+        displayName: "Deploy my front-end container"
+        steps:
+          - task: AzureWebAppContainer@1
+            displayName: "Deploy frontend to App Service"
+            inputs:
+              azureSubscription: "$(armConnection)"
+              appName: "$(frontendAppService)"
+              containers: "$(acrLoginServer)/$(frontendImage):$(imageTag)"
+      # Backend deploy job
+      - job: DeployBackend
+        displayName: "Deploy backend container"
+        steps:
+          - task: AzureWebAppContainer@1
+            displayName: "Deploy backend to app service"
+            inputs: 
+              azureSubscription: "$(armConnection)"
+              appName: "$(backendAppService)"
+              containers: "$(acrLoginServer)/$(backendImage):$(imageTag)"
