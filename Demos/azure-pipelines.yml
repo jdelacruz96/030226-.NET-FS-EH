@@ -12,9 +12,26 @@ trigger:
 pool: 
   vmImage: "ubuntu-latest"
 
+variables: 
+  acrName: "taskmanageracr2" # name of my Azure Container registry
+  acrLoginServer: "taskmanageracr2.azurecr.io" # login server url from my container registry
+  frontendImage: "taskmanager-frontend" # name our front end docker image will be given by our CI/CD pipeline
+  backendImage: "taskmanager-api" # name our back end docker image will be given by our CI/CD pipeline
+  imageTag: "$(Build.BuildId)" # uses the specific pipeline run to tag our image
+  azureSubscription: "Training" # name of our Azure subscription where you created all this stuff
+  acrConnection: "ACRConnection" # name of your Azure DevOps Docker Registry Service Connection
+  armConnection: "AzureServiceConnection" # name of your Azure DevOps Resource Manager Service Connection
+  frontendAppService: "taskmanager-demo" # Name of the Azure Web App for the front end
+  backendAppService: "taskmanager-api" # Name of the Azure Web App for the back end
+  backendURL: "https://taskmanager-api-cfaeameyhwe8cqge.eastus-01.azurewebsites.net"
+  resourceGroup: "taskmanager-rg" # Name of the resource group everything lives in
+
 # Our CI/CD pipeline "Job" is broken out into stages. Each job inside a stage is further subdivided into discrete
 # tasks.
 
+# 3 Stage Pipeline
+
+# Stage 1 - Build (and test) front end and back end 
 stages:
   - stage: Build
     displayName: "Build my Front End"
@@ -116,3 +133,77 @@ stages:
               PathtoPublish: $(Build.ArtifactStagingDirectory)/TaskManagerAPI
               ArtifactName: "taskmanager-backend"
               publishLocation: "Container"
+
+# Stage 2: Docker build and push (both images to ACR)
+  - stage: DockerBuildAndPush
+    displayName: "Docker Build and Push to ACR"
+    dependsOn: Build # This stage depends on the preceding stage completing successfully
+    pool: 
+      vmImage: "ubuntu-latest"
+    jobs: # We'll have one job for the front end image, and one for the back end image
+      - job: DockerFrontEnd
+        displayName: "Build And Push Frontend Image to ACR"
+        steps:
+          
+          # Step 1: Log into ACR
+          - task: Docker@2
+            displayName: "Login to ACR"
+            inputs:
+              containerRegistry: "$(acrConnection)"
+              command: "login"
+
+          # Step 2: Build the image
+          - task: Docker@2
+            displayName: "Build frontend image"
+            inputs:
+              containerRegistry: "$(acrConnection)"
+              repository: "$(frontendImage)"
+              command: "build"
+              # Relative file path from .yml to front end docker image
+              Dockerfile: "/TaskManager/Dockerfile" 
+              buildContext: "TaskManager"
+              arguments: "--build-arg VITE_API_URL=$(backendURL)"
+              tags: $(imageTag) latest
+
+          # Step 3: Push the image to ACR
+          - task: Docker@2
+            displayName: "Push frontend image to ACR"
+            inputs: 
+              containerRegistry: "$(acrConnection)"
+              repository: "$(frontendImage)"
+              command: "push"
+              tags: $(imageTag) latest
+
+      - job: DockerBackEnd
+        displayName: "Build And Push BackEnd Image to ACR"
+        steps:
+          
+          # Step 1: Log into ACR
+          - task: Docker@2
+            displayName: "Login to ACR"
+            inputs:
+              containerRegistry: "$(acrConnection)"
+              command: "login"
+
+          # Step 2: Build the image
+          - task: Docker@2
+            displayName: "Build backend image"
+            inputs:
+              containerRegistry: "$(acrConnection)"
+              repository: "$(backendImage)"
+              command: "build"
+              # Relative file path from .yml to front end docker image
+              Dockerfile: "/TaskManagerAPI/Dockerfile" 
+              buildContext: "TaskManager"
+              tags: $(imageTag) latest
+
+          # Step 3: Push the image to ACR
+          - task: Docker@2
+            displayName: "Push backend image to ACR"
+            inputs: 
+              containerRegistry: "$(acrConnection)"
+              repository: "$(backendImage)"
+              command: "push"
+              tags: $(imageTag) latest
+
+      
