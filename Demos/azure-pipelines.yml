@@ -12,6 +12,10 @@ trigger:
 pool: 
   vmImage: "ubuntu-latest"
 
+# Our CI/CD pipeline "Job" is broken out into stages. Each job inside a stage is further subdivided into discrete
+# tasks.
+
+
 variables: 
   acrName: "taskmanageracr2" # name of my Azure Container registry
   acrLoginServer: "taskmanageracr2.azurecr.io" # login server url from my container registry
@@ -26,12 +30,6 @@ variables:
   backendURL: "https://taskmanager-api-cfaeameyhwe8cqge.eastus-01.azurewebsites.net"
   resourceGroup: "taskmanager-rg" # Name of the resource group everything lives in
 
-# Our CI/CD pipeline "Job" is broken out into stages. Each job inside a stage is further subdivided into discrete
-# tasks.
-
-# 3 Stage Pipeline
-
-# Stage 1 - Build (and test) front end and back end 
 stages:
   - stage: Build
     displayName: "Build my Front End"
@@ -134,76 +132,81 @@ stages:
               ArtifactName: "taskmanager-backend"
               publishLocation: "Container"
 
-# Stage 2: Docker build and push (both images to ACR)
+  
+  # Modified build and push to solve my permissions issues
   - stage: DockerBuildAndPush
+
     displayName: "Docker Build and Push to ACR"
-    dependsOn: Build # This stage depends on the preceding stage completing successfully
-    pool: 
-      vmImage: "ubuntu-latest"
-    jobs: # We'll have one job for the front end image, and one for the back end image
+    dependsOn: Build 
+    jobs:
       - job: DockerFrontEnd
-        displayName: "Build And Push Frontend Image to ACR"
+        displayName: "Build And Push Frontend Image"
         steps:
-          
-          # Step 1: Log into ACR
-          - task: Docker@2
-            displayName: "Login to ACR"
+          # Use Azure CLI to build and push directly. 
+          # This uses your ARM Connection's identity.
+          - task: AzureCLI@2
+            displayName: 'Build and Push via Azure CLI'
             inputs:
-              containerRegistry: "$(acrConnection)"
-              command: "login"
-
-          # Step 2: Build the image
-          - task: Docker@2
-            displayName: "Build frontend image"
-            inputs:
-              containerRegistry: "$(acrConnection)"
-              repository: "$(frontendImage)"
-              command: "build"
-              # Relative file path from .yml to front end docker image
-              Dockerfile: "/TaskManager/Dockerfile" 
-              buildContext: "TaskManager"
-              arguments: "--build-arg VITE_API_URL=$(backendURL)"
-              tags: $(imageTag) latest
-
-          # Step 3: Push the image to ACR
-          - task: Docker@2
-            displayName: "Push frontend image to ACR"
-            inputs: 
-              containerRegistry: "$(acrConnection)"
-              repository: "$(frontendImage)"
-              command: "push"
-              tags: $(imageTag) latest
+              azureSubscription: '$(armConnection)'
+              scriptType: 'bash'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                # Authenticate Docker to ACR
+                az acr login --name taskmanageracr2
+                
+                # Build the image using the local Docker engine
+                docker build -t $(acrLoginServer)/$(frontendImage):$(imageTag) \
+                            -t $(acrLoginServer)/$(frontendImage):latest \
+                            --build-arg VITE_API_URL=$(backendURL) \
+                            -f TaskManager/Dockerfile TaskManager
+                
+                # Push the images
+                docker push $(acrLoginServer)/$(frontendImage):$(imageTag)
+                docker push $(acrLoginServer)/$(frontendImage):latest
 
       - job: DockerBackEnd
-        displayName: "Build And Push BackEnd Image to ACR"
+        displayName: "Build And Push Backend Image"
         steps:
-          
-          # Step 1: Log into ACR
-          - task: Docker@2
-            displayName: "Login to ACR"
+          - task: AzureCLI@2
+            displayName: 'Build and Push via Azure CLI'
             inputs:
-              containerRegistry: "$(acrConnection)"
-              command: "login"
+              azureSubscription: '$(armConnection)'
+              scriptType: 'bash'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                az acr login --name taskmanageracr2
+                
+                docker build -t $(acrLoginServer)/$(backendImage):$(imageTag) \
+                             -t $(acrLoginServer)/$(backendImage):latest \
+                             -f TaskManagerAPI/Dockerfile TaskManagerAPI
+                
+                docker push $(acrLoginServer)/$(backendImage):$(imageTag)
+                docker push $(acrLoginServer)/$(backendImage):latest
 
-          # Step 2: Build the image
-          - task: Docker@2
-            displayName: "Build backend image"
+  # Stage 3: Deploy both containers to their respective Azure App services
+  - stage: DeployToAppServices
+    displayName: "Deploy full stack to our app services"
+    dependsOn: DockerBuildAndPush
+    pool: 
+      vmImage: "ubuntu-latest"
+    jobs:
+      # Frontend deploy job
+      - job: DeployFrontend
+        displayName: "Deploy my front-end container"
+        steps:
+          - task: AzureWebAppContainer@1
+            displayName: "Deploy frontend to App Service"
             inputs:
-              containerRegistry: "$(acrConnection)"
-              repository: "$(backendImage)"
-              command: "build"
-              # Relative file path from .yml to front end docker image
-              Dockerfile: "/TaskManagerAPI/Dockerfile" 
-              buildContext: "TaskManager"
-              tags: $(imageTag) latest
-
-          # Step 3: Push the image to ACR
-          - task: Docker@2
-            displayName: "Push backend image to ACR"
+              azureSubscription: "$(armConnection)"
+              appName: "$(frontendAppService)"
+              containers: "$(acrLoginServer)/$(frontendImage):$(imageTag)"
+      # Backend deploy job
+      - job: DeployBackend
+        displayName: "Deploy backend container"
+        steps:
+          - task: AzureWebAppContainer@1
+            displayName: "Deploy backend to app service"
             inputs: 
-              containerRegistry: "$(acrConnection)"
-              repository: "$(backendImage)"
-              command: "push"
-              tags: $(imageTag) latest
-
-      
+              azureSubscription: "$(armConnection)"
+              appName: "$(backendAppService)"
+              containers: "$(acrLoginServer)/$(backendImage):$(imageTag)"
